@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useState, FormEvent, ChangeEvent } from "react";
 import { ArrowLeft, Loader2, AlertCircle, HeartPulse } from "lucide-react";
 import { useSession } from "@/lib/session";
+import { register } from "@/lib/api";
 
 interface RegisterData {
   role: "patient" | "doctor" | "";
@@ -70,29 +71,28 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      // Simulation d'inscription
-      // En production, appeler une API d'inscription
-      const mockUser = {
-        id: Math.random().toString(36).substr(2, 9),
-        email: form.email,
+      const result = await register({
+        role: form.role,
         firstName: form.firstName,
         lastName: form.lastName,
-        role: form.role,
-        ...(form.role === "doctor" && { specialite: form.specialite }),
-      };
+        email: form.email,
+        password: form.password,
+        specialite: form.specialite,
+        rpps: form.rpps
+      });
 
       // Stocker la session
       setSession({
         role: form.role as "patient" | "doctor",
-        userId: mockUser.id,
+        userId: result.user.id,
       });
 
       // Redirection
       const path =
         form.role === "doctor" ? "/dashboard/doctor" : "/dashboard/patient";
       router.push(path);
-    } catch (err) {
-      setError("Erreur lors de l'inscription. Veuillez réessayer.");
+    } catch (err: any) {
+      setError(err.message || "Erreur lors de l'inscription. Veuillez réessayer.");
     } finally {
       setLoading(false);
     }

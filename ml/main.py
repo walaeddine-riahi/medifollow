@@ -53,6 +53,31 @@ class MessageCreate(BaseModel):
 
 # --- Endpoints Auth ---
 
+@app.post("/auth/register")
+async def register(user: dict):
+    if db.db is not None:
+        # Check if email already exists
+        existing = await db.db.patients.find_one({"email": user["email"]})
+        if not existing:
+            existing = await db.db.doctors.find_one({"email": user["email"]})
+        
+        if existing:
+            raise HTTPException(status_code=400, detail="Cet email est déjà utilisé")
+        
+        # Add a unique ID for the business logic
+        user["id"] = str(uuid.uuid4())
+        
+        if user["role"] == "patient":
+            await db.db.patients.insert_one(user)
+        else:
+            user["userId"] = user["id"] # Many parts of code use userId for doctors
+            await db.db.doctors.insert_one(user)
+            
+        user["_id"] = str(user["_id"])
+        return {"status": "success", "user": user}
+    
+    raise HTTPException(status_code=500, detail="Database connection error")
+
 @app.post("/auth/login")
 async def login(req: LoginRequest):
     if db.db is not None:

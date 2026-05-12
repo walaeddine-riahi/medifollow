@@ -37,10 +37,8 @@ export default function LoginPage() {
           result.role === "doctor" ? "/dashboard/doctor" : "/dashboard/patient";
         router.push(path);
       }
-    } catch (err) {
-      setError(
-        "Identifiants invalides. Essayez demo@doctor.com ou demo@patient.com"
-      );
+    } catch (err: any) {
+      setError(err.message || "Identifiants invalides.");
     } finally {
       setLoading(false);
     }
