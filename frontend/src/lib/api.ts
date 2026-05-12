@@ -59,7 +59,9 @@ export async function login(email: string, password: string) {
   };
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+let base_url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Supprime le slash final s'il existe pour éviter les double slashes // dans les fetchs
+const API_URL = base_url.endsWith("/") ? base_url.slice(0, -1) : base_url;
 
 /* --------------------------------- PATIENT --------------------------------- */
 export async function getPatient(id: string): Promise<Patient | undefined> {
