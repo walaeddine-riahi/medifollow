@@ -30,7 +30,7 @@ import {
   getThread,
   sendMessage,
 } from "@/lib/api";
-import type { Patient, PatientProfile, Item, Interaction, Message } from "@/lib/types";
+import type { Patient, PatientProfile, Item, Interaction, Message, Doctor } from "@/lib/types";
 import { MessageThread } from "@/components/MessageThread";
 import {
   LineChart as RechartsLineChart,
