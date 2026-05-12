@@ -30,7 +30,8 @@ let base_url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const API_URL = base_url.endsWith("/") ? base_url.slice(0, -1) : base_url;
 
 /* --------------------------------- AUTH --------------------------------- */
-export async function login(email: string, password: string) {
+
+export const login = async (email: string, password: string) => {
   try {
     const response = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
@@ -45,9 +46,9 @@ export async function login(email: string, password: string) {
     console.error("Login Error:", error);
     throw error;
   }
-}
+};
 
-export async function register(payload: any) {
+export const register = async (payload: any) => {
   try {
     const response = await fetch(`${API_URL}/auth/register`, {
       method: "POST",
@@ -62,21 +63,21 @@ export async function register(payload: any) {
     console.error("Register Error:", error);
     throw error;
   }
-}
+};
 
 /* --------------------------------- PATIENT --------------------------------- */
-export async function getPatient(id: string): Promise<Patient | undefined> {
+
+export const getPatient = async (id: string): Promise<Patient | undefined> => {
   try {
     const response = await fetch(`${API_URL}/patients/${id}`);
     if (response.ok) return await response.json();
   } catch (error) {
     console.error("Get Patient Error:", error);
   }
-  // Fallback
   return mockPatients.find((p) => p.id === id);
-}
+};
 
-export async function getPatients(): Promise<Patient[]> {
+export const getPatients = async (): Promise<Patient[]> => {
   try {
     const response = await fetch(`${API_URL}/patients`);
     if (response.ok) return await response.json();
@@ -84,12 +85,9 @@ export async function getPatients(): Promise<Patient[]> {
     console.error("Get Patients Error:", error);
   }
   return mockPatients;
-}
+};
 
-export async function getPatientProfile(
-  id: string,
-  vitals?: any
-): Promise<PatientProfile | undefined> {
+export const getPatientProfile = async (id: string, vitals?: any): Promise<PatientProfile | undefined> => {
   try {
     if (vitals) {
       const response = await fetch(`${API_URL}/ml/profile?patient_id=${id}`, {
@@ -106,9 +104,9 @@ export async function getPatientProfile(
     console.error("Get Profile Error:", error);
   }
   return mockProfiles.find((p) => p.patientId === id);
-}
+};
 
-export async function getPatientRiskHistory(id: string): Promise<RiskPoint[]> {
+export const getPatientRiskHistory = async (id: string): Promise<RiskPoint[]> => {
   try {
     const response = await fetch(`${API_URL}/ml/history/${id}`);
     if (response.ok) {
@@ -123,13 +121,13 @@ export async function getPatientRiskHistory(id: string): Promise<RiskPoint[]> {
     console.error("ML History Error:", error);
   }
   return [];
-}
+};
 
-export async function getPatientObservance(id: string): Promise<ObservancePoint[]> {
+export const getPatientObservance = async (id: string): Promise<ObservancePoint[]> => {
   return buildObservanceSeries(id);
-}
+};
 
-export async function getRecommendedItems(id: string): Promise<Item[]> {
+export const getRecommendedItems = async (id: string): Promise<Item[]> => {
   try {
     const response = await fetch(`${API_URL}/ml/recommend/${id}`);
     if (response.ok) {
@@ -154,14 +152,13 @@ export async function getRecommendedItems(id: string): Promise<Item[]> {
     console.error("ML Recommend Error:", error);
   }
   return mockItems.slice(0, 5);
-}
+};
 
-export async function getPatientInteractions(id: string) {
-  // En production, on pourrait aussi fetch les interactions depuis MongoDB
+export const getPatientInteractions = async (id: string) => {
   return mockInteractions.filter((i) => i.patientId === id);
-}
+};
 
-export async function postInteraction(payload: any) {
+export const postInteraction = async (payload: any) => {
   try {
     const response = await fetch(`${API_URL}/ml/interactions`, {
       method: "POST",
@@ -173,10 +170,11 @@ export async function postInteraction(payload: any) {
     console.error("Post Interaction Error:", error);
   }
   return { status: "error" };
-}
+};
 
 /* --------------------------------- DOCTOR --------------------------------- */
-export async function getDoctor(id: string): Promise<Doctor | undefined> {
+
+export const getDoctor = async (id: string): Promise<Doctor | undefined> => {
   try {
     const response = await fetch(`${API_URL}/doctors/${id}`);
     if (response.ok) return await response.json();
@@ -184,10 +182,11 @@ export async function getDoctor(id: string): Promise<Doctor | undefined> {
     console.error("Get Doctor Error:", error);
   }
   return mockDoctors.find((d) => d.id === id || d.userId === id);
-}
+};
 
 /* --------------------------------- ALERTS --------------------------------- */
-export async function getAlerts(doctorId: string): Promise<Alert[]> {
+
+export const getAlerts = async (doctorId: string): Promise<Alert[]> => {
   try {
     const response = await fetch(`${API_URL}/alerts/${doctorId}`);
     if (response.ok) return await response.json();
@@ -195,19 +194,20 @@ export async function getAlerts(doctorId: string): Promise<Alert[]> {
     console.error("Get Alerts Error:", error);
   }
   return mockAlerts.filter((a) => a.doctorId === doctorId);
-}
+};
 
-export async function acknowledgeAlert(alertId: string) {
+export const acknowledgeAlert = async (alertId: string) => {
   try {
     await fetch(`${API_URL}/alerts/ack/${alertId}`, { method: "POST" });
   } catch (error) {
     console.error("Ack Alert Error:", error);
   }
   return { ok: true };
-}
+};
 
 /* --------------------------------- MESSAGES --------------------------------- */
-export async function getThread(patientId: string, doctorId: string): Promise<Message[]> {
+
+export const getThread = async (patientId: string, doctorId: string): Promise<Message[]> => {
   try {
     const response = await fetch(`${API_URL}/messages/${patientId}/${doctorId}`);
     if (response.ok) return await response.json();
@@ -215,9 +215,9 @@ export async function getThread(patientId: string, doctorId: string): Promise<Me
     console.error("Get Thread Error:", error);
   }
   return [];
-}
+};
 
-export async function sendMessage(payload: any) {
+export const sendMessage = async (payload: any) => {
   try {
     const response = await fetch(`${API_URL}/messages`, {
       method: "POST",
@@ -229,4 +229,4 @@ export async function sendMessage(payload: any) {
     console.error("Send Message Error:", error);
   }
   return { ...payload, timestamp: new Date().toISOString(), id: `msg_${Date.now()}` };
-}
+};
