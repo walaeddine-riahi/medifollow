@@ -61,7 +61,7 @@ function PatientDetailContent() {
 
   const [patient, setPatient] = useState<Patient | null>(null);
   const [profile, setProfile] = useState<PatientProfile | null>(null);
-  const [doctor, setDoctor] = useState(null);
+  const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [recommendations, setRecommendations] = useState<Item[]>([]);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -84,7 +84,7 @@ function PatientDetailContent() {
       setProfile(prof || null);
       setRecommendations(recs);
       setInteractions(inter);
-      setDoctor(doc);
+      setDoctor(doc || null);
       setMessages(msgs);
     } catch (error) {
       console.error("Erreur lors du chargement", error);
