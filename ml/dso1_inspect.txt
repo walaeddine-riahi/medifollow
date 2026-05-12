@@ -1,0 +1,225 @@
+﻿--- Cell 3 (code) ---
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.model_selection import train_test_split, cross_val_score
+from imblearn.over_sampling import SMOTE
+import os, time, warnings
+warnings.filterwarnings('ignore')
+
+%matplotlib inline
+plt.rcParams['figure.figsize'] = (14, 6)
+plt.rcParams['font.size'] = 12
+
+DATASETS_DIR = os.path.join(os.getcwd(), 'datasets')
+print('Ô£à Imports OK')
+
+--- Cell 5 (code) ---
+import os
+
+# Create the datasets directory if it doesn't exist
+if not os.path.exists(DATASETS_DIR):
+    os.makedirs(DATASETS_DIR)
+    print(f"Directory '{DATASETS_DIR}' created.")
+
+# List files in the current directory to identify the dataset files
+current_files = [f for f in os.listdir('/content/') if f.endswith('.csv') and f.startswith('dataset_')]
+
+# Move the dataset files to the DATASETS_DIR
+for filename in current_files:
+    src_path = os.path.join('/content/', filename)
+    dst_path = os.path.join(DATASETS_DIR, filename)
+    if os.path.exists(src_path):
+        os.rename(src_path, dst_pa
+
+--- Cell 7 (code) ---
+df_raw = pd.read_csv(os.path.join(DATASETS_DIR, 'dataset_before_cleaning .csv'))
+print(f"Shape: {df_raw.shape}")
+df_raw.head(10)
+
+--- Cell 8 (code) ---
+df_raw.info()
+
+--- Cell 9 (code) ---
+missing = df_raw.isnull().sum()
+missing_pct = (missing / len(df_raw) * 100).round(1)
+missing_report = pd.DataFrame({'Manquantes': missing, '%': missing_pct})
+missing_report = missing_report[missing_report['Manquantes'] > 0].sort_values('Manquantes', ascending=False)
+print(f"Total valeurs manquantes : {missing.sum()}")
+print(f"Doublons : {df_raw.duplicated().sum()}")
+missing_report
+
+--- Cell 10 (code) ---
+fig, ax = plt.subplots(figsize=(12, 5))
+colors = ['#e74c3c' if p > 5 else '#f39c12' if p > 3 else '#3498db' for p in missing_report['%']]
+bars = ax.barh(missing_report.index, missing_report['Manquantes'], color=colors, alpha=0.85)
+ax.set_title('Rapport des Valeurs Manquantes (Before Cleaning)', fontsize=15, fontweight='bold')
+ax.set_xlabel('Nombre')
+for bar, val, pct in zip(bars, missing_report['Manquantes'], missing_report['%']):
+    ax.text(bar.get_width() + 2, bar.get_y() + bar.get_height()/2, f'{val} ({pct}%)', va='center', fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+--- Cell 11 (code) ---
+outlier_cols = ['freq_cardiaque', 'pa_systolique', 'temperature', 'imc', 'spo2']
+fig, axes = plt.subplots(1, len(outlier_cols), figsize=(18, 4))
+for i, col in enumerate(outlier_cols):
+    axes[i].boxplot(df_raw[col].dropna(), patch_artist=True, boxprops=dict(facecolor='#e74c3c', alpha=0.6))
+    axes[i].set_title(col, fontweight='bold')
+plt.suptitle('D├®tection des Outliers ÔÇö Before Cleaning', fontsize=15, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+--- Cell 12 (code) ---
+df_raw.describe()
+
+--- Cell 14 (code) ---
+df_clean = pd.read_csv(os.path.join(DATASETS_DIR, 'dataset_after_cleaning.csv'))
+print(f"Shape avant : {df_raw.shape}  ÔåÆ  apr├¿s : {df_clean.shape}")
+print(f"Valeurs manquantes : {df_clean.isnull().sum().sum()}")
+print(f"Doublons : {df_clean.duplicated().sum()}")
+df_clean.head(10)
+
+--- Cell 15 (code) ---
+import matplotlib.pyplot as plt
+
+compare_cols = ['freq_cardiaque', 'pa_systolique', 'temperature', 'imc', 'spo2']
+fig, axes = plt.subplots(len(compare_cols), 2, figsize=(16, 4 * len(compare_cols)))
+for i, col in enumerate(compare_cols):
+    axes[i, 0].hist(df_raw[col].dropna(), bins=40, color='#e74c3c', alpha=0.7, edgecolor='white')
+    axes[i, 0].set_title(f'{col} ÔÇö AVANT', fontweight='bold')
+    axes[i, 1].hist(df_clean[col], bins=40, color='#2ecc71', alpha=0.7, edgecolor='white')
+    axes[i, 1].set_title(f'{col} ÔÇö APR├êS', fontweight='bold')
+plt.suptitle('Distributions ÔÇö Avant vs Apr├¿s Netto
+
+--- Cell 16 (code) ---
+num_cols = df_clean.select_dtypes(include=[np.number]).columns
+fig, ax = plt.subplots(figsize=(14, 10))
+mask = np.triu(np.ones_like(df_clean[num_cols].corr(), dtype=bool))
+sns.heatmap(df_clean[num_cols].corr(), mask=mask, annot=True, fmt='.2f', cmap='RdBu_r',
+            center=0, square=True, linewidths=0.5)
+ax.set_title('Matrice de Corr├®lation (After Cleaning)', fontsize=15, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+--- Cell 18 (code) ---
+df = df_clean.copy()
+le_sexe = LabelEncoder()
+
+# Encode 'sexe' if it exists in the DataFrame
+if 'sexe' in df.columns:
+    df['sexe_encoded'] = le_sexe.fit_transform(df['sexe'])
+    print(f"LabelEncoder sexe: {dict(zip(le_sexe.classes_, le_sexe.transform(le_sexe.classes_)))}")
+
+# 'comorbidites', 'antecedents', and 'niveau_risque' are already absent in df_clean.
+# Removing the problematic get_dummies and drop operations for these columns.
+
+columns_to_drop = []
+# Only drop 'sexe' if it was present and 'sexe_encoded' was created.
+if 'sexe' in df.columns:
+    columns_to_drop.append('sexe')
+
+if colu
+
+--- Cell 19 (code) ---
+y = df['risque_complication']
+X = df.drop(columns=['risque_complication'])
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+scaler = StandardScaler()
+num_features = ['age', 'imc', 'freq_cardiaque', 'pa_systolique', 'pa_diastolique',
+                'spo2', 'temperature', 'duree_hospitalisation', 'nb_diagnostics',
+                'observance_traitement', 'score_questionnaire']
+num_features = [f for f in num_features if f in X_train.columns]
+X_train[num_features] = scaler.fit_transform(X_train[num_features])
+X_test[num_features] = scaler.tran
+
+--- Cell 20 (code) ---
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+colors = ['#2ecc71', '#e74c3c']
+y_train.value_counts().plot(kind='bar', ax=axes[0], color=colors, alpha=0.8)
+axes[0].set_title('Avant SMOTE', fontsize=13, fontweight='bold')
+axes[0].set_xticklabels(['Non risque (0)', '├Ç risque (1)'], rotation=0)
+pd.Series(y_train_sm).value_counts().plot(kind='bar', ax=axes[1], color=colors, alpha=0.8)
+axes[1].set_title('Apr├¿s SMOTE (Train)', fontsize=13, fontweight='bold')
+axes[1].set_xticklabels(['Non risque (0)', '├Ç risque (1)'], rotation=0)
+plt.suptitle('├ëquilibrage des Classes ÔÇö SMOTE', fontsize=15, fontweigh
+
+--- Cell 22 (code) ---
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
+from sklearn.svm import SVC
+from sklearn.metrics import (accuracy_score, f1_score, precision_score, recall_score,
+                             roc_auc_score, classification_report, confusion_matrix, roc_curve)
+
+models = {
+    'R├®gression Logistique': LogisticRegression(max_iter=1000, random_state=42),
+    'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42),
+    'XGBoost': XGBClassifier(n_estimators=100, max_depth=5, learning_rate=0.1,
+
+
+--- Cell 23 (code) ---
+metrics = ['Accuracy', 'F1-Score', 'Pr├®cision', 'Rappel', 'AUC-ROC']
+colors_bar = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12']
+x = np.arange(len(metrics))
+width = 0.2
+fig, ax = plt.subplots(figsize=(16, 7))
+for i, (model_name, color) in enumerate(zip(df_results.index, colors_bar)):
+    vals = [df_results.loc[model_name, m] for m in metrics]
+    bars = ax.bar(x + i * width, vals, width, label=model_name, color=color, alpha=0.85)
+    for bar, val in zip(bars, vals):
+        ax.text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.005,
+                f'{val:.3f}', ha='center', va='bottom',
+
+--- Cell 24 (code) ---
+fig, ax = plt.subplots(figsize=(10, 8))
+for name, model, color in zip(models.keys(), models.values(), colors_bar):
+    y_prob = model.predict_proba(X_test)[:, 1]
+    fpr, tpr, _ = roc_curve(y_test, y_prob)
+    auc = roc_auc_score(y_test, y_prob)
+    ax.plot(fpr, tpr, label=f'{name} (AUC={auc:.4f})', color=color, linewidth=2)
+ax.plot([0, 1], [0, 1], 'k--', alpha=0.5)
+ax.set_xlabel('Taux Faux Positifs', fontsize=12)
+ax.set_ylabel('Taux Vrais Positifs', fontsize=12)
+ax.set_title('Courbes ROC ÔÇö DSO1', fontsize=16, fontweight='bold')
+ax.legend(fontsize=11); ax.grid(alpha=0.3)
+plt.tight_layout()
+plt
+
+--- Cell 25 (code) ---
+xgb = models['XGBoost']
+y_pred_xgb = xgb.predict(X_test)
+fig, ax = plt.subplots(figsize=(8, 6))
+cm = confusion_matrix(y_test, y_pred_xgb)
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax,
+            xticklabels=['Non risque', '├Ç risque'], yticklabels=['Non risque', '├Ç risque'])
+ax.set_xlabel('Pr├®dit', fontsize=12); ax.set_ylabel('R├®el', fontsize=12)
+ax.set_title('Matrice de Confusion ÔÇö XGBoost (retenu)', fontsize=14, fontweight='bold')
+plt.tight_layout()
+plt.show()
+print(classification_report(y_test, y_pred_xgb, target_names=['Non risque', '├Ç risque']))
+
+--- Cell 27 (code) ---
+# Fonction utilitaire pour afficher les r├®sultats d├®taill├®s d'un mod├¿le
+def afficher_resultats_prediction(model, model_name, X_test, y_test, color='#3498db'):
+    """
+    Affiche les r├®sultats de pr├®diction d├®taill├®s pour un mod├¿le donn├®.
+    """
+    y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)[:, 1]
+
+    fig, axes = plt.subplots(1, 3, figsize=(22, 6))
+    fig.suptitle(f'R├®sultats de Pr├®diction ÔÇö {model_name}', fontsize=18, fontweight='bold', y=1.02)
+
+    # 1. Matrice de confusion
+    cm = confusion_matrix(y_test, y_pred)
+    sns.heatmap(cm, annot=True, fmt='d', cmap
+
+--- Cell 29 (code) ---
+y_pred_lr, y_prob_lr = afficher_resultats_prediction(
+    models['R├®gression Logistique'], 'R├®gression Logistique', X_test, y_test, color='#3498db'
+)
+

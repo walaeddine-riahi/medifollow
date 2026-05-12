@@ -1,0 +1,7 @@
+nom,categorie,frequence_recommandee,niveau_difficulte,pathologie_cible,item_id
+Bilan qualite de vie,questionnaire,bi-hebdomadaire,moyen,neurologique,0
+Suivi symptomes,questionnaire,hebdomadaire,difficile,respiratoire,1
+Prise temperature,medicament,mensuel,difficile,general,2
+Auto-evaluation humeur,questionnaire,hebdomadaire,facile,orthopedique,3
+Visite pneumologue,consultation,mensuel,difficile,respiratoire,4
+Module education diabete,education,bi-hebdomadaire,moyen,diabete,5

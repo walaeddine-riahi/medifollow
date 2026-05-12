@@ -1,0 +1,242 @@
+﻿Total cells: 36
+--- Cell 2 (code) ---
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
+from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
+from sklearn.decomposition import PCA
+from sklearn.neighbors import NearestNeighbors
+from scipy.cluster.hierarchy import dendrogram, linkage
+import os, time, warnings
+warnings.filterwarnings('ignore
+
+--- Cell 4 (code) ---
+# ==============================
+# FLUX PIPELINE DSO2 ÔÇö Visualisation
+# ==============================
+fig, ax = plt.subplots(figsize=(16, 3.5))
+ax.set_xlim(0, 16); ax.set_ylim(0, 3.5)
+ax.axis('off')
+fig.patch.set_facecolor('#0D1B2A')
+ax.set_facecolor('#0D1B2A')
+
+ax.text(8, 3.2, 'Pipeline DSO2 : Entree ÔåÆ Traitement ÔåÆ Sortie', ha='center',
+        fontsize=14, fontweight='bold', color='white')
+
+steps = [
+    ('Load\nData', '#1565C0', 1.2, 'CSV files\ndataset_*.csv'),
+    ('StandardScaler\n(Normal
+
+--- Cell 6 (code) ---
+df_raw = pd.read_csv(os.path.join(DATASETS_DIR, 'dataset_before_cleaning.csv'))
+print(f"Shape: {df_raw.shape}")
+print(f"Valeurs manquantes: {df_raw.isnull().sum().sum()}")
+print(f"Doublons: {df_raw.duplicated().sum()}")
+df_raw.head(10)
+
+--- Cell 7 (code) ---
+# Valeurs manquantes
+missing = df_raw.isnull().sum()
+missing = missing[missing > 0].sort_values(ascending=True)
+fig, ax = plt.subplots(figsize=(10, 5))
+missing.plot(kind='barh', color='#e74c3c', alpha=0.8, ax=ax)
+ax.set_title('Valeurs Manquantes ÔÇö Before Cleaning', fontsize=14, fontweight='bold')
+for i, v in enumerate(missing.values):
+    ax.text(v + 1, i, f'{v} ({v/len(df_raw)*100:.1f}%)', va='center')
+plt.tight_layout()
+plt.show()
+
+--- Cell 8 (code) ---
+# Boxplots outliers
+fig, axes = plt.subplots(1, 5, figsize=(18, 4))
+for i, col in enumerate(['freq_cardiaque', 'pa_systolique', 'temperature', 'glycemie', 'imc']):
+    axes[i].boxplot(df_raw[col].dropna(), patch_artist=True, boxprops=dict(facecolor='#e74c3c', alpha=0.6))
+    axes[i].set_title(col, fontweight='bold')
+plt.suptitle('D├®tection Outliers ÔÇö Before Cleaning', fontsize=15, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+--- Cell 10 (code) ---
+df_clean = pd.read_csv(os.path.join(DATASETS_DIR, 'dataset_after_cleaning.csv'))
+print(f"Shape: {df_clean.shape}")
+print(f"Valeurs manquantes: {df_clean.isnull().sum().sum()}")
+print(f"Doublons: {df_clean.duplicated().sum()}")
+df_clean.describe()
+
+--- Cell 11 (code) ---
+# Corr├®lation
+fig, ax = plt.subplots(figsize=(14, 10))
+mask = np.triu(np.ones_like(df_clean.corr(), dtype=bool))
+sns.heatmap(df_clean.corr(), mask=mask, annot=True, fmt='.2f', cmap='RdBu_r', center=0, square=True)
+ax.set_title('Matrice de Corr├®lation (After Cleaning)', fontsize=15, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+--- Cell 13 (code) ---
+scaler = StandardScaler()
+X_scaled = pd.DataFrame(scaler.fit_transform(df_clean), columns=df_clean.columns)
+print(f"Shape: {X_scaled.shape}")
+print(f"Moyennes (Ôëê0): {X_scaled.mean().abs().max():.6f}")
+print(f"├ëcarts-types (Ôëê1): {X_scaled.std().mean():.4f}")
+X_scaled.head()
+
+--- Cell 15 (code) ---
+# M├®thode du coude + Silhouette
+K = range(2, 10)
+inertias, silhouettes = [], []
+for k in K:
+    km = KMeans(n_clusters=k, random_state=42, n_init=10)
+    km.fit(X_scaled)
+    inertias.append(km.inertia_)
+    silhouettes.append(silhouette_score(X_scaled, km.labels_))
+
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+axes[0].plot(K, inertias, 'bo-', linewidth=2); axes[0].set_title('M├®thode du Coude', fontweight='bold')
+axes[1].plot(K, silhouettes, 'go-', linewidth=2); axes[1].set_title('Score Silho
+
+--- Cell 16 (code) ---
+kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
+labels_km = kmeans.fit_predict(X_scaled)
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_scaled)
+
+print(f"Silhouette: {silhouette_score(X_scaled, labels_km):.4f}")
+print(f"Davies-Bouldin: {davies_bouldin_score(X_scaled, labels_km):.4f}")
+
+fig, ax = plt.subplots(figsize=(10, 7))
+scatter = ax.scatter(X_pca[:, 0], X_pca[:, 1], c=labels_km, cmap='viridis', alpha=0.5, s=15)
+ax.set_title('K-Means (k=3) ÔÇö Projection PCA', fontsize=15, font
+
+--- Cell 18 (code) ---
+nn = NearestNeighbors(n_neighbors=5)
+nn.fit(X_scaled)
+distances, _ = nn.kneighbors(X_scaled)
+distances = np.sort(distances[:, -1])
+eps_val = np.percentile(distances, 95)
+
+dbscan = DBSCAN(eps=eps_val, min_samples=5)
+labels_db = dbscan.fit_predict(X_scaled)
+n_clusters_db = len(set(labels_db)) - (1 if -1 in labels_db else 0)
+n_noise = (labels_db == -1).sum()
+print(f"eps={eps_val:.4f}, Clusters: {n_clusters_db}, Bruit: {n_noise}")
+
+fig, ax = plt.subplots(figsize=(10, 7))
+scatter = ax.scatter(X_pca[:
+
+--- Cell 20 (code) ---
+sample = X_scaled.sample(200, random_state=42)
+Z = linkage(sample, method='ward')
+fig, ax = plt.subplots(figsize=(16, 6))
+dendrogram(Z, truncate_mode='lastp', p=30, leaf_rotation=90, ax=ax)
+ax.set_title('Dendrogramme (Ward)', fontsize=15, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+--- Cell 21 (code) ---
+agglo = AgglomerativeClustering(n_clusters=3)
+labels_hc = agglo.fit_predict(X_scaled)
+print(f"Silhouette: {silhouette_score(X_scaled, labels_hc):.4f}")
+
+fig, ax = plt.subplots(figsize=(10, 7))
+scatter = ax.scatter(X_pca[:, 0], X_pca[:, 1], c=labels_hc, cmap='plasma', alpha=0.5, s=15)
+ax.set_title('Hi├®rarchique (k=3) ÔÇö PCA', fontsize=15, fontweight='bold')
+plt.colorbar(scatter, label='Cluster')
+plt.tight_layout()
+plt.show()
+
+--- Cell 23 (code) ---
+# =============================================
+# TESTS D'ACCURACY ÔÇö DSO2 SEGMENTATION
+# =============================================
+SEUIL_SILHOUETTE = 0.02
+SEUIL_DB = 5.0
+SEUIL_CH = 30.0
+
+test_passed = 0
+test_failed = 0
+
+def run_test(name, condition):
+    global test_passed, test_failed
+    status = 'Ô£à PASS' if condition else 'ÔØî FAIL'
+    if condition: test_passed += 1
+    else: test_failed += 1
+    print(f"  {status} : {name}")
+
+print('=' * 70)
+print('­ƒº¬ TESTS D\'ACCURACY ÔÇö DSO2 SEGMENTATION'
+
+--- Cell 24 (code) ---
+# Tests comparatifs
+print('\n  ÔöÇÔöÇ ­ƒÅå TESTS COMPARATIFS ÔöÇÔöÇ')
+run_test(f'K-Means meilleur ou ├®gal Silhouette', km_sil >= hc_sil)
+run_test(f'Au moins 2 m├®thodes fonctionnelles', len([s for s in all_scores if s['Silhouette'] != '-']) >= 2)
+
+print(f"\n{'=' * 70}")
+print(f"­ƒÅü R├ëSULTAT : {test_passed} pass├®s, {test_failed} ├®chou├®s sur {test_passed + test_failed} tests")
+print(f"{'=' * 70}")
+if test_failed == 0:
+    print('Ô£à TOUS LES TESTS PASSENT !')
+else:
+    print(f'ÔÜá´©Å {test_failed} test(s) en ├®chec')
+
+--- Cell 25 (code) ---
+# Tableau r├®capitulatif
+pd.DataFrame(all_scores).set_index('Mod├¿le')
+
+--- Cell 27 (code) ---
+# ==============================
+# R├ëSULTATS CONCRETS ÔÇö Visualisations
+# ==============================
+import matplotlib.gridspec as gridspec
+
+fig = plt.figure(figsize=(18, 6))
+gs = gridspec.GridSpec(1, 3, figure=fig, wspace=0.35)
+fig.patch.set_facecolor('#0D1B2A')
+
+# --- 1. R├®partition des clusters (Pie) ---
+ax1 = fig.add_subplot(gs[0])
+ax1.set_facecolor('#0D1B2A')
+sizes = [pd.Series(labels_km).value_counts().sort_index()[i] for i in range(3)]
+labels_pie = [f'Cluster {i}' for i in range(3)]
+co
+
+--- Cell 29 (code) ---
+# Ajouter les labels K-Means au dataframe nettoy├®
+df_clustered = df_clean.copy()
+df_clustered['cluster'] = labels_km
+
+# Calculer les profils moyens pour chaque cluster
+cluster_means = df_clustered.groupby('cluster').mean()
+display(cluster_means)
+
+--- Cell 31 (code) ---
+# Afficher 3 exemples de patients par cluster
+for i in sorted(df_clustered['cluster'].unique()):
+    print(f"\n--- Cluster {i} ---")
+    display(df_clustered[df_clustered['cluster'] == i].head(3))
+
+--- Cell 33 (code) ---
+# Statistiques cliniques cl├®s par cluster
+clinical_stats = df_clustered.groupby('cluster')[['spo2', 'freq_cardiaque', 'age']].mean()
+display(clinical_stats)
+
+--- Cell 34 (code) ---
+# ==============================
+# ANALYSE ÔÇö Radar Chart + Interpr├®tation Clinique
+# ==============================
+fig = plt.figure(figsize=(18, 6))
+fig.patch.set_facecolor('#0D1B2A')
+
+# --- Radar Chart ---
+df_cl = df_clean.copy()
+df_cl['cluster'] = labels_km
+means_cl = df_cl.groupby('cluster').mean()
+
+radar_cols = [c for c in ['age', 'freq_cardiaque', 'spo2', 'imc', 'duree_hospitalisation'] 
+              if c in means_cl.columns][:5]
+if len(radar_cols) < 3:
+    radar_cols = list(means_cl.colu
+

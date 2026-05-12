@@ -1,0 +1,229 @@
+
+<h2 class="sr-only">Scénario détaillé en 9 étapes : de la sortie hôpital au suivi médecin</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans,sans-serif);color:var(--color-text-primary)}
+.stepper{padding:1rem 0}
+.progress{display:flex;gap:6px;margin-bottom:1.5rem;align-items:center}
+.dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-secondary);flex-shrink:0;transition:all .2s}
+.dot.active{background:var(--color-background-info);color:var(--color-text-info);border-color:var(--color-border-info)}
+.dot.done{background:var(--color-background-success);color:var(--color-text-success);border-color:var(--color-border-success)}
+.line{flex:1;height:0.5px;background:var(--color-border-tertiary)}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1.25rem;min-height:260px}
+.card-header{display:flex;align-items:center;gap:10px;margin-bottom:1rem;padding-bottom:10px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.card-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.card-title{font-size:15px;font-weight:500}
+.card-subtitle{font-size:12px;color:var(--color-text-secondary);margin-top:2px}
+.section{margin-bottom:12px}
+.section-label{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.pill-row{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-size:11px;padding:3px 9px;border-radius:10px;border:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary);background:var(--color-background-secondary)}
+.pill.blue{background:#e6f1fb;color:#0c447c;border-color:#b5d4f4}
+.pill.green{background:#eaf3de;color:#27500a;border-color:#c0dd97}
+.pill.amber{background:#faeeda;color:#633806;border-color:#fac775}
+.pill.red{background:#fcebeb;color:#791f1f;border-color:#f7c1c1}
+.pill.purple{background:#eeedfe;color:#3c3489;border-color:#cecbf6}
+.pill.teal{background:#e1f5ee;color:#085041;border-color:#9fe1cb}
+.flow-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-secondary);margin:4px 0}
+.flow-box{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:6px;padding:3px 8px;font-size:11px;font-family:var(--font-mono)}
+.arrow-txt{color:var(--color-text-tertiary);font-size:12px}
+.result-box{border-left:3px solid var(--color-border-success);padding:8px 12px;background:var(--color-background-success);border-radius:0;margin-top:8px}
+.alert-box{border-left:3px solid var(--color-border-danger);padding:8px 12px;background:var(--color-background-danger);border-radius:0;margin-top:8px}
+.info-box{border-left:3px solid var(--color-border-info);padding:8px 12px;background:var(--color-background-info);border-radius:0;margin-top:8px}
+.result-box p,.alert-box p,.info-box p{font-size:12px;line-height:1.6;color:var(--color-text-primary)}
+.nav{display:flex;justify-content:space-between;align-items:center;margin-top:1rem;gap:8px}
+.nav button{font-size:13px;padding:6px 16px}
+.counter{font-size:12px;color:var(--color-text-secondary)}
+@media(prefers-color-scheme:dark){
+.pill.blue{background:#042c53;color:#b5d4f4;border-color:#185fa5}
+.pill.green{background:#173404;color:#c0dd97;border-color:#3b6d11}
+.pill.amber{background:#412402;color:#fac775;border-color:#854f0b}
+.pill.red{background:#501313;color:#f7c1c1;border-color:#a32d2d}
+.pill.purple{background:#26215c;color:#cecbf6;border-color:#534ab7}
+.pill.teal{background:#04342c;color:#9fe1cb;border-color:#0f6e56}
+}
+</style>
+
+<div class="stepper">
+<div class="progress" id="prog"></div>
+<div class="card" id="card"></div>
+<div class="nav">
+  <button onclick="prev()">← Précédent</button>
+  <span class="counter" id="ctr"></span>
+  <button onclick="next()">Suivant →</button>
+</div>
+</div>
+
+<script>
+const steps = [
+{
+  icon:"ti ti-building-hospital",
+  iconBg:"var(--color-background-secondary)",
+  title:"Étape 1 — Sortie de l'hôpital",
+  subtitle:"Le patient Ahmed, 58 ans, diabétique, 2 comorbidités, quitte l'hôpital",
+  actor:"Patient",
+  actorColor:"teal",
+  data:["Nom : Ahmed Ben Ali","Âge : 58 ans","Pathologie : diabète","Comorbidités : 2","Score autonomie : 3/5"],
+  api:null,
+  ml:null,
+  result:{type:"info",text:"Le médecin Dr. Karim Mansouri lui remet les identifiants de la plateforme. Ahmed reçoit un SMS avec le lien d'inscription."}
+},
+{
+  icon:"ti ti-user-plus",
+  iconBg:"var(--color-background-info)",
+  title:"Étape 2 — Inscription patient",
+  subtitle:"POST /auth/register — création du compte avec rôle PATIENT",
+  actor:"Patient",
+  actorColor:"teal",
+  data:["email : ahmed@mail.com","password : ******","role : PATIENT","doctor_id : DR-001","type_pathologie : diabète","nb_comorbidites : 2","score_autonomie : 3"],
+  api:["POST /auth/register","POST /auth/login","→ JWT access_token émis","→ refresh_token (httpOnly cookie)"],
+  ml:null,
+  result:{type:"success",text:"Compte créé dans MongoDB (collection users) + entrée Prisma (User + Session). JWT valable 30 min. Ahmed est redirigé vers son tableau de bord."}
+},
+{
+  icon:"ti ti-brain",
+  iconBg:"var(--color-background-warning)",
+  title:"Étape 3 — Activation du moteur ML",
+  subtitle:"GET /patients/me/profile — les 3 modèles s'exécutent en parallèle",
+  actor:"Système ML",
+  actorColor:"amber",
+  data:["age : 58","sexe : M","nb_comorbidites : 2","type_pathologie : diabète","observance : 0.5 (défaut)","score_autonomie : 0.6"],
+  api:["GET /patients/me/profile","→ POST /ml/predict (DSO1)","→ POST /ml/segment (DSO2)","→ GET /ml/recommend/{id} (DSO3)"],
+  ml:["DSO1 Random Forest → risque : MOYEN","DSO2 K-Means → cluster 1 : patients chroniques observants","DSO3 Collaboratif → soins : Module éducation diabète, Bilan qualité vie, Suivi symptômes, Visite pneumologue, Auto-évaluation humeur"],
+  result:{type:"success",text:"Les résultats sont stockés dans la collection patient_profiles (MongoDB). La page patient se charge avec les 3 résultats ML en moins de 800ms."}
+},
+{
+  icon:"ti ti-layout-dashboard",
+  iconBg:"var(--color-background-success)",
+  title:"Étape 4 — Dashboard patient (vue Ahmed)",
+  subtitle:"Ahmed voit son profil ML complet et ses soins recommandés",
+  actor:"Patient",
+  actorColor:"teal",
+  data:["Bandeau RISQUE MOYEN (orange)","Cluster : Patients chroniques observants","5 soins recommandés affichés","Graphique observance vide (J1)","Journal de suivi disponible"],
+  api:["GET /patients/me/recommendations","GET /patients/me/risk-history","GET /patients/me/observance"],
+  ml:null,
+  result:{type:"info",text:"Ahmed consulte ses soins recommandés. Il voit que 'Module éducation diabète' est en priorité 1. Il clique sur 'Marquer comme complété'."}
+},
+{
+  icon:"ti ti-check",
+  iconBg:"var(--color-background-success)",
+  title:"Étape 5 — Patient complète un soin",
+  subtitle:"Ahmed marque 'Module éducation diabète' comme réalisé",
+  actor:"Patient",
+  actorColor:"teal",
+  data:["patient_id : PAT-001","item_id : 5 (Module éducation diabète)","completed : true","nb_fois_realise : 1","rating auto-calculé : 4.0","timestamp : maintenant"],
+  api:["POST /patients/me/interactions","→ MongoDB collection interactions","→ observance recalculée : 0.65"],
+  ml:null,
+  result:{type:"success",text:"L'interaction est enregistrée. Le score d'observance d'Ahmed passe de 0.5 à 0.65. Le graphique sur son dashboard se met à jour en temps réel."}
+},
+{
+  icon:"ti ti-stethoscope",
+  iconBg:"var(--color-background-info)",
+  title:"Étape 6 — Dashboard médecin (Dr. Mansouri)",
+  subtitle:"GET /doctors/me/patients — le médecin voit tous ses patients",
+  actor:"Médecin",
+  actorColor:"blue",
+  data:["Ahmed Ben Ali — RISQUE MOYEN","Observance : 65%","Cluster : chronique observant","Dernière activité : il y a 2h","3 autres patients listés"],
+  api:["GET /doctors/me/patients","GET /doctors/patients/PAT-001","GET /doctors/me/stats"],
+  ml:null,
+  result:{type:"info",text:"Le Dr. Mansouri filtre par 'risque élevé' — aucun patient dans cette catégorie aujourd'hui. Il clique sur Ahmed pour voir sa fiche détaillée."}
+},
+{
+  icon:"ti ti-file-analytics",
+  iconBg:"var(--color-background-info)",
+  title:"Étape 7 — Fiche patient détaillée",
+  subtitle:"Le médecin consulte l'évolution ML et modifie le plan de soins",
+  actor:"Médecin",
+  actorColor:"blue",
+  data:["Graphique observance 30j","Historique soins réalisés","Cluster + explication","Prédiction risque actuelle","Override possible du plan ML"],
+  api:["GET /doctors/patients/PAT-001","PUT /doctors/patients/PAT-001/plan","GET /doctors/patients/PAT-001/report"],
+  ml:["Recalcul DSO1 avec observance = 0.65","Nouveau résultat : risque FAIBLE","Amélioration détectée"],
+  result:{type:"success",text:"Le médecin ajoute 'Visite pneumologue' au plan personnalisé. Il génère un rapport PDF qu'il télécharge pour le dossier clinique d'Ahmed."}
+},
+{
+  icon:"ti ti-message-circle",
+  iconBg:"var(--color-background-secondary)",
+  title:"Étape 8 — Messagerie bidirectionnelle",
+  subtitle:"Ahmed pose une question, le médecin répond en temps réel (WebSocket)",
+  actor:"Les deux",
+  actorColor:"purple",
+  data:["Ahmed : J'ai des douleurs dans les jambes","Timestamp : 14h32","WebSocket /ws/doctor/DR-001 actif","Notification médecin reçue","Dr. Mansouri : Prenez ibuprofène 400mg"],
+  api:["POST /patients/me/messages","WS /ws/doctor/DR-001","POST /doctors/messages/PAT-001","WS /ws/patient/PAT-001"],
+  ml:null,
+  result:{type:"info",text:"La réponse arrive en moins de 2 secondes chez Ahmed via WebSocket. Le fil de messages est stocké dans MongoDB (collection messages)."}
+},
+{
+  icon:"ti ti-bell-ringing",
+  iconBg:"var(--color-background-danger)",
+  title:"Étape 9 — Alerte automatique (J+7)",
+  subtitle:"APScheduler recalcule tous les risques à 02h00 — anomalie détectée",
+  actor:"Système",
+  actorColor:"red",
+  data:["Observance d'Ahmed chute : 0.3","nb_comorbidites : 2","score_autonomie : 2 (dégradé)","DSO1 recalcul → risque ÉLEVÉ","Ancien risque : FAIBLE"],
+  api:["POST /admin/cron/risk-refresh","→ POST /ml/predict (tous patients)","→ MongoDB insert alerts","→ WS /ws/doctor/DR-001 push"],
+  ml:["DSO1 → risque passe FAIBLE → ÉLEVÉ","Alerte créée : old_risk=faible, new_risk=élevé","Notification WebSocket immédiate"],
+  result:{type:"danger",text:"Le Dr. Mansouri reçoit une alerte rouge sur son dashboard. La cloche clignote avec le badge '1 alerte urgente'. Il contacte Ahmed immédiatement."}
+}
+];
+
+let current = 0;
+
+function render(){
+  const s = steps[current];
+  const prog = document.getElementById('prog');
+  prog.innerHTML = '';
+  steps.forEach((_, i) => {
+    if(i>0) prog.innerHTML += '<div class="line"></div>';
+    const cls = i < current ? 'done' : i === current ? 'active' : '';
+    prog.innerHTML += `<div class="dot ${cls}" onclick="goto(${i})">${i < current ? '✓' : i+1}</div>`;
+  });
+  
+  let mlHtml = '';
+  if(s.ml){
+    mlHtml = `<div class="section">
+      <div class="section-label">Résultats ML</div>
+      <div class="pill-row">${s.ml.map(m=>`<span class="pill amber">${m}</span>`).join('')}</div>
+    </div>`;
+  }
+  
+  let apiHtml = '';
+  if(s.api){
+    apiHtml = `<div class="section">
+      <div class="section-label">Appels API</div>
+      <div class="pill-row">${s.api.map(a=>`<span class="pill blue">${a}</span>`).join('')}</div>
+    </div>`;
+  }
+  
+  const resClass = s.result.type === 'danger' ? 'alert-box' : s.result.type === 'success' ? 'result-box' : 'info-box';
+  
+  document.getElementById('card').innerHTML = `
+    <div class="card-header">
+      <div class="card-icon"><i class="${s.icon}" style="font-size:20px;color:var(--color-text-secondary)" aria-hidden="true"></i></div>
+      <div>
+        <div class="card-title">${s.title}</div>
+        <div class="card-subtitle">${s.subtitle}</div>
+      </div>
+      <span class="pill ${s.actorColor}" style="margin-left:auto;flex-shrink:0">${s.actor}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <div class="section">
+          <div class="section-label">Données</div>
+          <div class="pill-row">${s.data.map(d=>`<span class="pill">${d}</span>`).join('')}</div>
+        </div>
+        ${apiHtml}
+      </div>
+      <div>
+        ${mlHtml}
+        <div class="${resClass}"><p>${s.result.text}</p></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('ctr').textContent = `${current+1} / ${steps.length}`;
+}
+
+function next(){ if(current < steps.length-1){ current++; render(); } }
+function prev(){ if(current > 0){ current--; render(); } }
+function goto(i){ current = i; render(); }
+render();
+</script>

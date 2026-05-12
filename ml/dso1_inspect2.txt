@@ -1,0 +1,169 @@
+﻿--- Cell 30 (code) ---
+# ├ëchantillon de pr├®dictions ÔÇö R├®gression Logistique
+sample_idx = np.random.RandomState(42).choice(len(X_test), size=10, replace=False)
+sample_df = pd.DataFrame({
+    'Patient #': sample_idx,
+    'R├®alit├®': ['├Ç risque' if y_test.iloc[i] == 1 else 'Non ├á risque' for i in sample_idx],
+    'Pr├®diction': ['├Ç risque' if y_pred_lr[i] == 1 else 'Non ├á risque' for i in sample_idx],
+    'Probabilit├® Risque (%)': [f'{y_prob_lr[i]*100:.1f}%' for i in sample_idx],
+    'Correct': ['Ô£à' if y_test.iloc[i] == y_pred_lr[i] else 'ÔØî' for i in sample_idx]
+})
+print('­ƒöì ├ëchantillon de 10 patients ÔÇö R├®gression Logistique')
+sample_df
+
+--- Cell 32 (code) ---
+y_pred_rf, y_prob_rf = afficher_resultats_prediction(
+    models['Random Forest'], 'Random Forest', X_test, y_test, color='#2ecc71'
+)
+
+--- Cell 33 (code) ---
+# ├ëchantillon de pr├®dictions ÔÇö Random Forest
+sample_df_rf = pd.DataFrame({
+    'Patient #': sample_idx,
+    'R├®alit├®': ['├Ç risque' if y_test.iloc[i] == 1 else 'Non ├á risque' for i in sample_idx],
+    'Pr├®diction': ['├Ç risque' if y_pred_rf[i] == 1 else 'Non ├á risque' for i in sample_idx],
+    'Probabilit├® Risque (%)': [f'{y_prob_rf[i]*100:.1f}%' for i in sample_idx],
+    'Correct': ['Ô£à' if y_test.iloc[i] == y_pred_rf[i] else 'ÔØî' for i in sample_idx]
+})
+print('­ƒöì ├ëchantillon de 10 patients ÔÇö Random Forest')
+sample_df_rf
+
+--- Cell 35 (code) ---
+y_pred_xgb2, y_prob_xgb = afficher_resultats_prediction(
+    models['XGBoost'], 'XGBoost Ô£à (Retenu)', X_test, y_test, color='#e67e22'
+)
+
+--- Cell 36 (code) ---
+# ├ëchantillon de pr├®dictions ÔÇö XGBoost
+sample_df_xgb = pd.DataFrame({
+    'Patient #': sample_idx,
+    'R├®alit├®': ['├Ç risque' if y_test.iloc[i] == 1 else 'Non ├á risque' for i in sample_idx],
+    'Pr├®diction': ['├Ç risque' if y_pred_xgb2[i] == 1 else 'Non ├á risque' for i in sample_idx],
+    'Probabilit├® Risque (%)': [f'{y_prob_xgb[i]*100:.1f}%' for i in sample_idx],
+    'Correct': ['Ô£à' if y_test.iloc[i] == y_pred_xgb2[i] else 'ÔØî' for i in sample_idx]
+})
+print('­ƒöì ├ëchantillon de 10 patients ÔÇö XGBoost (Retenu)')
+sample_df_xgb
+
+--- Cell 37 (code) ---
+# Feature Importance ÔÇö XGBoost
+if hasattr(X_test, 'columns'):
+    importance_df = pd.DataFrame({
+        'Feature': X_test.columns,
+        'Importance': models['XGBoost'].feature_importances_
+    }).sort_values('Importance', ascending=True).tail(15)
+
+    fig, ax = plt.subplots(figsize=(12, 8))
+    bars = ax.barh(importance_df['Feature'], importance_df['Importance'],
+                   color='#e67e22', alpha=0.85, edgecolor='white')
+    for bar, val in zip(bars, importance_df['Importance']):
+        ax.text(bar.get_width() + 0.002, bar.get_y() + bar.get_height()/2,
+                f'{val:.4f}', va='center', fontsize=10)
+    ax.set_title('Top 15 Features les plus Importantes ÔÇö XGBoost', fonts
+
+--- Cell 39 (code) ---
+y_pred_svm, y_prob_svm = afficher_resultats_prediction(
+    models['SVM'], 'SVM', X_test, y_test, color='#e74c3c'
+)
+
+--- Cell 40 (code) ---
+# ├ëchantillon de pr├®dictions ÔÇö SVM
+sample_df_svm = pd.DataFrame({
+    'Patient #': sample_idx,
+    'R├®alit├®': ['├Ç risque' if y_test.iloc[i] == 1 else 'Non ├á risque' for i in sample_idx],
+    'Pr├®diction': ['├Ç risque' if y_pred_svm[i] == 1 else 'Non ├á risque' for i in sample_idx],
+    'Probabilit├® Risque (%)': [f'{y_prob_svm[i]*100:.1f}%' for i in sample_idx],
+    'Correct': ['Ô£à' if y_test.iloc[i] == y_pred_svm[i] else 'ÔØî' for i in sample_idx]
+})
+print('­ƒöì ├ëchantillon de 10 patients ÔÇö SVM')
+sample_df_svm
+
+--- Cell 42 (code) ---
+# Tableau comparatif : pr├®dictions de chaque mod├¿le sur le m├¬me ├®chantillon de patients
+compare_df = pd.DataFrame({
+    'Patient #': sample_idx,
+    'R├®alit├®': ['├Ç risque' if y_test.iloc[i] == 1 else 'Non risque' for i in sample_idx],
+    'Log. R├®gression': [f"{'├Ç risque' if y_pred_lr[i]==1 else 'Non risque'} ({y_prob_lr[i]*100:.0f}%)" for i in sample_idx],
+    'Random Forest': [f"{'├Ç risque' if y_pred_rf[i]==1 else 'Non risque'} ({y_prob_rf[i]*100:.0f}%)" for i in sample_idx],
+    'XGBoost Ô£à': [f"{'├Ç risque' if y_pred_xgb2[i]==1 else 'Non risque'} ({y_prob_xgb[i]*100:.0f}%)" for i in sample_idx],
+    'SVM': [f"{'├Ç risque' if y_pred_svm[i]==1 else 'Non risque'} ({y_prob_svm[i]*100:.0f}%)" fo
+
+--- Cell 43 (code) ---
+# Taux d'accord entre les mod├¿les
+all_preds = np.column_stack([y_pred_lr, y_pred_rf, y_pred_xgb2, y_pred_svm])
+unanime = np.sum(np.all(all_preds == all_preds[:, [0]], axis=1))
+accord_3sur4 = np.sum(np.apply_along_axis(lambda x: max(np.sum(x==0), np.sum(x==1)) >= 3, 1, all_preds))
+
+print(f'­ƒñØ Accord entre les 4 mod├¿les :')
+print(f'   Unanimit├® (4/4)       : {unanime}/{len(y_test)} patients ({unanime/len(y_test)*100:.1f}%)')
+print(f'   Majorit├®  (ÔëÑ3/4)      : {accord_3sur4}/{len(y_test)} patients ({accord_3sur4/len(y_test)*100:.1f}%)')
+print(f'   D├®saccord (2 vs 2)    : {len(y_test)-accord_3sur4}/{len(y_test)} patients ({(len(y_test)-accord_3sur4)/len(y_test)*100:.1f}%)')
+
+# Visualisation du ta
+
+--- Cell 45 (code) ---
+SEUIL_ACCURACY = 0.70
+SEUIL_F1 = 0.50
+SEUIL_AUC = 0.70
+SEUIL_RAPPEL = 0.45
+
+test_passed = 0
+test_failed = 0
+test_details = []
+
+def run_test(name, condition):
+    global test_passed, test_failed
+    status = 'Ô£à PASS' if condition else 'ÔØî FAIL'
+    if condition: test_passed += 1
+    else: test_failed += 1
+    print(f"  {status} : {name}")
+
+print('=' * 70)
+print('­ƒº¬ TESTS D\'ACCURACY ÔÇö DSO1 PR├ëDICTION')
+print('=' * 70)
+
+for name, model in models.items():
+    print(f"\n  ÔöÇÔöÇ ­ƒñû {name} ÔöÇÔöÇ")
+    y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)[:, 1]
+    acc = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    auc = roc_auc_score(y_test, y_prob)
+    rappel = re
+
+--- Cell 46 (code) ---
+print('\n  ÔöÇÔöÇ ­ƒÅå TESTS COMPARATIFS ÔöÇÔöÇ')
+df_test = pd.DataFrame(test_details).set_index('Mod├¿le')
+
+run_test(f'Au moins 3 mod├¿les > {SEUIL_ACCURACY} accuracy',
+         (df_test['Accuracy'] >= SEUIL_ACCURACY).sum() >= 3)
+run_test(f'Meilleur AUC-ROC > 0.80 ({df_test["AUC"].max():.4f})',
+         df_test['AUC'].max() > 0.80)
+run_test(f'Tous les CV > {SEUIL_ACCURACY}',
+         (df_test['CV_Mean'] >= SEUIL_ACCURACY).all())
+
+print(f"\n{'=' * 70}")
+print(f"­ƒÅü R├ëSULTAT : {test_passed} pass├®s, {test_failed} ├®chou├®s sur {test_passed + test_failed} tests")
+print(f"{'=' * 70}")
+if test_failed == 0:
+    print('Ô£à TOUS LES TESTS PASSENT !')
+else:
+    print(f'ÔÜá´©Å {test_failed} test(s) en ├®chec')
+
+--- Cell 47 (code) ---
+# Tableau r├®capitulatif des tests
+df_recap = df_test.copy()
+df_recap['Accuracy'] = df_recap['Accuracy'].apply(lambda x: f"{x:.4f} {'Ô£à' if x >= SEUIL_ACCURACY else 'ÔØî'}")
+df_recap['F1'] = df_recap['F1'].apply(lambda x: f"{x:.4f} {'Ô£à' if x >= SEUIL_F1 else 'ÔØî'}")
+df_recap['AUC'] = df_recap['AUC'].apply(lambda x: f"{x:.4f} {'Ô£à' if x >= SEUIL_AUC else 'ÔØî'}")
+df_recap['Rappel'] = df_recap['Rappel'].apply(lambda x: f"{x:.4f} {'Ô£à' if x >= SEUIL_RAPPEL else 'ÔØî'}")
+df_recap['CV'] = df_recap.apply(lambda r: f"{r['CV_Mean']:.4f} ┬▒ {r['CV_Std']:.4f}", axis=1)
+df_recap.drop(columns=['CV_Mean', 'CV_Std'], inplace=True)
+df_recap
+
+--- Cell 49 (code) ---
+
+
+--- Cell 50 (code) ---
+
+

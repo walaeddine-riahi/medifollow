@@ -1,0 +1,275 @@
+﻿Total cells: 37
+--- Cell 2 (code) ---
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics.pairwise import cosine_similarity
+import os, time, warnings
+warnings.filterwarnings('ignore')
+
+%matplotlib inline
+plt.rcParams['figure.figsize'] = (14, 6)
+plt.rcParams['font.size'] = 12
+
+DATASETS_DIR = os.getcwd() # Set DATASETS_DIR to the current working directory '/content/'
+print('Ô£à Imports OK')
+
+--- Cell 4 (code) ---
+patients_raw = pd.read_csv(os.path.join(DATASETS_DIR, 'patients.csv'))
+items_raw = pd.read_csv(os.path.join(DATASETS_DIR, 'items.csv'))
+interactions_raw = pd.read_csv(os.path.join(DATASETS_DIR, 'interactions.csv'))
+
+print(f"Patients     : {patients_raw.shape} ÔÇö NaN: {patients_raw.isnull().sum().sum()}, Doublons ID: {patients_raw.duplicated(subset='patient_id').sum()}")
+print(f"Items        : {items_raw.shape}")
+print(f"Interactions : {interactions_raw.shape} ÔÇö NaN: {interactions_raw.isnull().sum().sum()}, Doublons: {interactions_raw.duplicated().sum()}")
+print(f"Ratings hors [1,5]: {((interact
+
+--- Cell 5 (code) ---
+patients_raw.head(10)
+
+--- Cell 6 (code) ---
+items_raw.head(10)
+
+--- Cell 7 (code) ---
+interactions_raw.head(10)
+
+--- Cell 8 (code) ---
+fig, ax = plt.subplots(figsize=(10, 5))
+ax.hist(interactions_raw['rating'].dropna(), bins=30, color='#e74c3c', alpha=0.7, edgecolor='white')
+ax.axvline(1, color='blue', linestyle='--', alpha=0.5, label='Min [1]')
+ax.axvline(5, color='blue', linestyle='--', alpha=0.5, label='Max [5]')
+ax.set_title('Distribution Ratings ÔÇö AVANT Nettoyage', fontsize=14, fontweight='bold')
+ax.legend()
+plt.tight_layout()
+plt.show()
+
+--- Cell 10 (code) ---
+# NOTE: Assuming 'patients.csv', 'items.csv', 'interactions.csv' are the cleaned versions as no separate 'after_cleaning' files were found.
+# This means 'patients' will currently load the same data as 'patients_raw' until an explicit cleaning step or different files are provided.
+patients = pd.read_csv(os.path.join(DATASETS_DIR, 'patients.csv'))
+items = pd.read_csv(os.path.join(DATASETS_DIR, 'items.csv'))
+interactions = pd.read_csv(os.path.join(DATASETS_DIR, 'interactions.csv'))
+
+print(f"Patients     : {patients.shape} ÔÇö NaN: {patients.isnull().sum().sum()}")
+print(f"Items        : {items.shap
+
+--- Cell 11 (code) ---
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+axes[0].hist(interactions_raw['rating'].dropna(), bins=30, color='#e74c3c', alpha=0.7, edgecolor='white')
+axes[0].set_title('AVANT', fontsize=13, fontweight='bold')
+axes[1].hist(interactions['rating'], bins=30, color='#2ecc71', alpha=0.7, edgecolor='white')
+axes[1].set_title('APR├êS', fontsize=13, fontweight='bold')
+plt.suptitle('Distribution Ratings ÔÇö Before vs After', fontsize=15, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+--- Cell 13 (code) ---
+n_patients = patients['patient_id'].max() + 1
+n_items = items['item_id'].max() + 1
+
+# Matrice compl├¿te
+user_item_matrix = np.zeros((n_patients, n_items))
+for _, row in interactions.iterrows():
+    pid, iid = int(row['patient_id']), int(row['item_id'])
+    if pid < n_patients and iid < n_items:
+        user_item_matrix[pid, iid] = row['rating']
+
+sparsity = (user_item_matrix == 0).sum() / user_item_matrix.size
+print(f"Matrice User-Item : {user_item_matrix.shape}")
+print(f"Sparsit├® : {sparsity:.2%}")
+print(f"Rating moyen : {user_item_matrix[user_item_matrix > 0].mean():.2f}")
+
+fig, ax = plt.subpl
+
+--- Cell 14 (code) ---
+# Split train/test
+train_inter, test_inter = train_test_split(interactions, test_size=0.2, random_state=42)
+print(f"Train: {train_inter.shape}, Test: {test_inter.shape}")
+
+# Matrice train uniquement
+train_matrix = np.zeros((n_patients, n_items))
+for _, row in train_inter.iterrows():
+    pid, iid = int(row['patient_id']), int(row['item_id'])
+    if pid < n_patients and iid < n_items:
+        train_matrix[pid, iid] = row['rating']
+
+--- Cell 16 (code) ---
+# Helper function for CF prediction for a single user
+def predict_cf_for_user(user_id, train_matrix, user_sim, n_items):
+    user_preds = np.zeros(n_items)
+    for iid in range(n_items):
+        if train_matrix[user_id, iid] == 0:  # Only predict for unrated items
+            sims = user_sim[user_id]
+            ratings_of_item = train_matrix[:, iid]
+            mask = ratings_of_item > 0
+            if mask.sum() == 0:
+                continue
+            pred = np.sum(sims[mask] * ratings_of_item[mask]) / (np.abs(sims[mask]).sum() + 1e-8)
+            user_preds[iid] = np.clip(pred, 1, 5)
+   
+
+--- Cell 18 (code) ---
+print("­ƒöä Filtrage Collaboratif...")
+start = time.time()
+
+# Similarit├® cosinus entre users
+user_sim = cosine_similarity(train_matrix)
+np.fill_diagonal(user_sim, 0)
+
+# Pr├®dictions sur le test set
+cf_preds, cf_actuals = [], []
+for _, row in test_inter.iterrows():
+    uid, iid = int(row['patient_id']), int(row['item_id'])
+    if uid >= n_patients or iid >= n_items:
+        continue
+    sims = user_sim[uid]
+    ratings = train_matrix[:, iid]
+    mask = ratings > 0
+    if mask.sum() == 0:
+        continue
+    pred = np.sum(sims[mask] * ratings[mask]) / (np.abs(sims[mask]).sum() + 1e-8)
+    cf_preds.
+
+--- Cell 19 (code) ---
+# Visualisation Collaboratif
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+axes[0].hist(cf_actuals, bins=20, alpha=0.7, color='#3498db', label='R├®els', edgecolor='white')
+axes[0].hist(cf_preds, bins=20, alpha=0.7, color='#e74c3c', label='Pr├®dits', edgecolor='white')
+axes[0].set_title('Distribution Ratings', fontsize=13, fontweight='bold')
+axes[0].legend(); axes[0].set_xlabel('Rating')
+
+axes[1].scatter(cf_actuals, cf_preds, alpha=0.3, s=15, color='#3498db')
+axes[1].plot([1, 5], [1, 5], 'r--', linewidth=2, label='Parfait')
+axes[1].set_xlabel('R├®el'); axes[1].set_ylabel('Pr├®dit')
+axes[1].set_ti
+
+--- Cell 21 (code) ---
+print("­ƒöä Content-Based...")
+start = time.time()
+
+# Encoder les features des items
+items_enc = items.copy()
+for col in ['categorie', 'frequence_recommandee', 'niveau_difficulte', 'pathologie_cible']:
+    if col in items_enc.columns:
+        items_enc[col] = LabelEncoder().fit_transform(items_enc[col].astype(str))
+
+feature_cols = [c for c in items_enc.columns if c not in ['item_id', 'nom']]
+item_features = items_enc[feature_cols].values.astype(float)
+
+# Similarit├® item-item
+item_sim = cosine_similarity(item_features)
+
+# Pr├®dictions
+cb_preds, cb_actuals = [], []
+for _, row in test_inter.iterrows(
+
+--- Cell 22 (code) ---
+# Visualisation Content-Based
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+axes[0].hist(cb_actuals, bins=20, alpha=0.7, color='#27ae60', label='R├®els', edgecolor='white')
+axes[0].hist(cb_preds, bins=20, alpha=0.7, color='#e67e22', label='Pr├®dits', edgecolor='white')
+axes[0].set_title('Distribution Ratings', fontsize=13, fontweight='bold')
+axes[0].legend(); axes[0].set_xlabel('Rating')
+
+axes[1].scatter(cb_actuals, cb_preds, alpha=0.3, s=15, color='#27ae60')
+axes[1].plot([1, 5], [1, 5], 'r--', linewidth=2, label='Parfait')
+axes[1].set_xlabel('R├®el'); axes[1].set_ylabel('Pr├®dit')
+axes[1].set_t
+
+--- Cell 24 (code) ---
+alpha = 0.6  # poids du collaboratif
+hy_rmse = alpha * cf_rmse + (1 - alpha) * cb_rmse
+hy_mae = alpha * cf_mae + (1 - alpha) * cb_mae
+print(f"Ô£à Hybride (╬▒={alpha}) ÔÇö RMSE: {hy_rmse:.4f}, MAE: {hy_mae:.4f}")
+
+--- Cell 25 (code) ---
+# Benchmarking visuel
+bench = pd.DataFrame([
+    {'Mod├¿le': 'Collaboratif', 'RMSE': cf_rmse, 'MAE': cf_mae, 'Temps (s)': round(cf_time, 3)},
+    {'Mod├¿le': 'Content-Based', 'RMSE': cb_rmse, 'MAE': cb_mae, 'Temps (s)': round(cb_time, 3)},
+    {'Mod├¿le': 'Hybride', 'RMSE': hy_rmse, 'MAE': hy_mae, 'Temps (s)': '-'}
+]).set_index('Mod├¿le')
+
+fig, ax = plt.subplots(figsize=(10, 6))
+colors = ['#3498db', '#27ae60', '#9b59b6']
+x = np.arange(2)
+width = 0.25
+for i, (name, color) in enumerate(zip(bench.index, colors)):
+    vals = [bench.loc[name, 'RMSE'], bench.loc[name, 'MAE']]
+    bars = ax.bar(x + i * w
+
+--- Cell 27 (code) ---
+SEUIL_RMSE = 2.5
+SEUIL_MAE = 2.0
+
+test_passed = 0
+test_failed = 0
+
+def run_test(name, condition):
+    global test_passed, test_failed
+    status = 'Ô£à PASS' if condition else 'ÔØî FAIL'
+    if condition: test_passed += 1
+    else: test_failed += 1
+    print(f"  {status} : {name}")
+
+print('=' * 70)
+print('­ƒº¬ TESTS D\'ACCURACY ÔÇö DSO3 RECOMMANDATION')
+print('=' * 70)
+
+# --- Collaboratif ---
+print(f"\n  ÔöÇÔöÇ ­ƒñû Filtrage Collaboratif ÔöÇÔöÇ")
+print(f"  RMSE: {cf_rmse:.4f} | MAE: {cf_mae:.4f} | Pr├®dictions: {len(cf_preds)}")
+run_test(f'RMSE <= {SEUIL_RMSE} ({cf_rmse:.4f})', cf_rmse <= SEUIL_RMSE)
+run_test(f'MA
+
+--- Cell 28 (code) ---
+# Tests comparatifs
+print('\n  ÔöÇÔöÇ ­ƒÅå TESTS COMPARATIFS ÔöÇÔöÇ')
+best_rmse = min(cf_rmse, cb_rmse, hy_rmse)
+run_test(f'Meilleur RMSE < {SEUIL_RMSE} ({best_rmse:.4f})', best_rmse < SEUIL_RMSE)
+run_test(f'3 mod├¿les fonctionnels', len(cf_preds) > 0 and len(cb_preds) > 0)
+run_test(f'Collaboratif RMSE < 1.5 ({cf_rmse:.4f})', cf_rmse < 1.5)
+
+print(f"\n{'=' * 70}")
+print(f"­ƒÅü R├ëSULTAT : {test_passed} pass├®s, {test_failed} ├®chou├®s sur {test_passed + test_failed} tests")
+print(f"{'=' * 70}")
+if test_failed == 0:
+    print('Ô£à TOUS LES TESTS PASSENT !')
+else:
+    print(f'ÔÜá´©Å {test_failed} test(s) en ├®chec')
+
+--- Cell 29 (code) ---
+# Tableau r├®capitulatif
+recap = pd.DataFrame([
+    {'Mod├¿le': 'Collaboratif',
+     'RMSE': f"{cf_rmse:.4f} {'Ô£à' if cf_rmse <= SEUIL_RMSE else 'ÔØî'}",
+     'MAE': f"{cf_mae:.4f} {'Ô£à' if cf_mae <= SEUIL_MAE else 'ÔØî'}",
+     'Pr├®dictions': len(cf_preds)},
+    {'Mod├¿le': 'Content-Based',
+     'RMSE': f"{cb_rmse:.4f} {'Ô£à' if cb_rmse <= SEUIL_RMSE else 'ÔØî'}",
+     'MAE': f"{cb_mae:.4f} {'Ô£à' if cb_mae <= SEUIL_MAE else 'ÔØî'}",
+     'Pr├®dictions': len(cb_preds)},
+    {'Mod├¿le': 'Hybride',
+     'RMSE': f"{hy_rmse:.4f} {'Ô£à' if hy_rmse <= SEUIL_RMSE else 'ÔØî'}",
+     'MAE': f"{hy_mae:.4f} {'Ô£à' if hy_mae <= 
+
+--- Cell 34 (code) ---
+# S├®lection d'un patient pour la d├®monstration
+sample_patient_id = 42
+
+print(f"### Recommandations pour le Patient {sample_patient_id} ###")
+
+# Affichage du profil clinique du patient
+print("\n--- Profil Clinique du Patient ---")
+display(patients[patients['patient_id'] == sample_patient_id])
+
+# Affichage de l'historique d'interactions du patient (ce qu'il a d├®j├á not├®)
+print("\n--- Historique d'Interactions (Train Set) ---")
+patient_history = train_inter[train_inter['patient_id'] == sample_patient_id]
+if not patient_history.empty:
+    # Merge with items to show item names
+    patient_history_wi
+
